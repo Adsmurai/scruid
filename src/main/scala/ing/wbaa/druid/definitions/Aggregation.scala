@@ -122,6 +122,7 @@ case class ThetaSketchAggregation(name: String,
 }
 
 trait FilteredAggregation extends Aggregation {
+  override val `type`: AggregationType = AggregationType.Filtered
   val aggregator: Aggregation
   val filter: Filter
 }
@@ -130,12 +131,13 @@ object FilteredAggregation {
   implicit val encoder: Encoder[FilteredAggregation] = new Encoder[FilteredAggregation] {
     final def apply(agg: FilteredAggregation): Json =
       (agg match {
-        case x: InFilteredAggregation => x.asJsonObject
+        case x: InFilteredAggregation       => x.asJsonObject
+        case x: SelectorFilteredAggregation => x.asJsonObject
       }).add("filter", filterEncoder(agg.filter)).asJson
   }
 }
 
 case class InFilteredAggregation(name: String, filter: InFilter, aggregator: Aggregation)
-    extends FilteredAggregation {
-  override val `type`: AggregationType = AggregationType.Filtered
-}
+    extends FilteredAggregation
+case class SelectorFilteredAggregation(name: String, filter: SelectFilter, aggregator: Aggregation)
+    extends FilteredAggregation

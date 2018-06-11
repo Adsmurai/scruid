@@ -137,7 +137,7 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
     }
   }
 
-  "also work with filtered aggregations" should {
+  "also work with 'in' filtered aggregations" should {
     "successfully be interpreted by Druid" in {
 
       val request = TopNQuery(
@@ -165,6 +165,39 @@ class DruidQuerySpec extends WordSpec with Matchers with ScalaFutures {
                                                        isAnonymous = "false")
         topN(1) shouldBe AggregatedFilteredAnonymous(count = 3799,
                                                      filteredCount = 1698,
+                                                     isAnonymous = "true")
+      }
+    }
+  }
+
+  "also work with 'selector' filtered aggregations" should {
+    "successfully be interpreted by Druid" in {
+
+      val request = TopNQuery(
+        dimension = Dimension(
+          dimension = "isAnonymous"
+        ),
+        threshold = 5,
+        metric = "count",
+        aggregations = List(
+          LongSumAggregation(name = "count", fieldName = "count"),
+          SelectorFilteredAggregation(
+            name = "SelectorFilteredAgg",
+            SelectFilter(dimension = "channel", value = "#en.wikipedia"),
+            aggregator = LongSumAggregation(name = "filteredCount", fieldName = "count")
+          )
+        ),
+        intervals = List("2011-06-01/2017-06-01")
+      ).execute
+
+      whenReady(request) { response =>
+        val topN = response.list[AggregatedFilteredAnonymous]
+        topN.size shouldBe 2
+        topN.head shouldBe AggregatedFilteredAnonymous(count = 35445,
+                                                       filteredCount = 9993,
+                                                       isAnonymous = "false")
+        topN(1) shouldBe AggregatedFilteredAnonymous(count = 3799,
+                                                     filteredCount = 1556,
                                                      isAnonymous = "true")
       }
     }
